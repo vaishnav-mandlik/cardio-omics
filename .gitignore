@@ -1,0 +1,20 @@
+# environments
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# pipeline state and data (public but large; re-created by `make fetch`)
+.snakemake/
+.snakemake_run.log
+data/
+.cache/
+.test_work/
+results/
+!results/.gitkeep
+*.sif
+
+.DS_Store
+.docker_build.log
