@@ -1,0 +1,60 @@
+run_name: magnet_gse141910__pxd042155
+outdir: results
+datadir: data
+cachedir: .cache
+seed: 20260923
+offline: false
+
+sources:
+  rnaseq_counts_url: "https://www.ncbi.nlm.nih.gov/geo/download/?type=rnaseq_counts&acc=GSE141910&format=file&file=GSE141910_raw_counts_GRCh38.p13_NCBI.tsv.gz"
+  rnaseq_series_matrix_url: "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE141nnn/GSE141910/matrix/GSE141910_series_matrix.txt.gz"
+  gene_info_url: "https://ftp.ncbi.nlm.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz"
+  proteomics_url: "https://ftp.pride.ebi.ac.uk/pride/data/archive/2024/11/PXD042155/BH_Larance_2020_proteomic_mass_spec_data_used_in_LVvsRV.xlsx"
+  reactome_gmt_url: "https://reactome.org/download/current/ReactomePathways.gmt.zip"
+
+rnaseq:
+  exclude_etiologies: [PPCM]
+  min_count: 10
+  design: "~ sex + race + age_z + etiology"
+  contrasts:
+    - [etiology, DCM, NF]
+    - [etiology, HCM, NF]
+  alpha: 0.05
+  lfc_threshold: 0.585
+  pca_top_genes: 500
+  outlier_mad: 5.0
+
+proteomics:
+  chamber: LV
+  case: ICM
+  control: Donor
+  min_valid_frac: 0.7
+  median_center: true
+  alpha: 0.05
+
+enrichment:
+  min_size: 15
+  max_size: 500
+  permutations: 1000
+  fdr: 0.05
+
+network:
+  top_n: 150
+  required_score: 700
+  string_api: https://version-12-0.string-db.org/api
+
+integration:
+  signature_padj: 0.01
+  signature_lfc: 0.585
+  signature_max_genes: 100
+  n_permutations: 2000
+
+classifier:
+  positive: DCM
+  negative: NF
+  outer_folds: 5
+  inner_folds: 3
+  n_top_var_genes: 2000
+  C_grid: [0.01, 0.1, 1.0]
+  l1_ratio_grid: [0.2, 0.5, 0.8]
+  baseline_genes: [NPPA, NPPB]
