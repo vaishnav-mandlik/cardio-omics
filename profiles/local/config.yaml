@@ -1,0 +1,5 @@
+cores: 8
+printshellcmds: true
+rerun-incomplete: true
+latency-wait: 5
+show-failed-logs: true

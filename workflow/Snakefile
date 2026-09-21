@@ -1,0 +1,164 @@
+import json
+from pathlib import Path
+
+import yaml
+
+from cardioomics.config import Config
+from cardioomics.paths import paths_for
+
+configfile: "config/config.yaml"
+
+CFG = Config.model_validate(config)
+RESOLVED = Path(".snakemake") / f"{CFG.run_name}.yaml"
+RESOLVED.parent.mkdir(parents=True, exist_ok=True)
+RESOLVED.write_text(yaml.safe_dump(json.loads(CFG.model_dump_json()), sort_keys=False))
+CONFIG_FILE = str(RESOLVED)
+
+P = paths_for(CFG)
+PRIMARY = f"{CFG.rnaseq.contrasts[0][1]}_vs_{CFG.rnaseq.contrasts[0][2]}"
+CONTRASTS = [f"{t}_vs_{r}" for _, t, r in CFG.rnaseq.contrasts]
+BENCH = P.d("benchmarks")
+
+
+rule all:
+    input:
+        P.report_md,
+        P.run_summary,
+
+
+rule fetch:
+    output:
+        [update(str(v)) for v in P.raw_inputs().values()],
+    log:
+        str(P.log("fetch_snakemake")),
+    shell:
+        "cardioomics fetch --config {CONFIG_FILE:q} 2> {log:q}"
+
+
+rule rnaseq_prep:
+    input:
+        str(P.rnaseq_counts),
+        str(P.series_matrix),
+        str(P.gene_info),
+    output:
+        counts=str(P.rna_counts),
+        meta=str(P.rna_meta),
+        qc=str(P.rna_qc),
+    log:
+        str(P.log("rnaseq_prep_snakemake")),
+    benchmark:
+        str(BENCH / "rnaseq_prep.tsv")
+    shell:
+        "cardioomics rnaseq-prep --config {CONFIG_FILE:q} 2> {log:q}"
+
+
+rule rnaseq_de:
+    input:
+        str(P.rna_counts),
+        str(P.rna_meta),
+    output:
+        [str(P.rna_de(c)) for c in CONTRASTS],
+    threads: 8
+    log:
+        str(P.log("rnaseq_de_snakemake")),
+    benchmark:
+        str(BENCH / "rnaseq_de.tsv")
+    resources:
+        mem_mb=16000,
+    shell:
+        "cardioomics rnaseq-de --config {CONFIG_FILE:q} --threads {threads} 2> {log:q}"
+
+
+rule proteomics:
+    input:
+        str(P.proteomics_xlsx),
+    output:
+        da=str(P.prot_da),
+        log2=str(P.prot_log2),
+        meta=str(P.prot_meta),
+        summary=str(P.prot_summary),
+    log:
+        str(P.log("proteomics_snakemake")),
+    benchmark:
+        str(BENCH / "proteomics.tsv")
+    shell:
+        "cardioomics proteomics --config {CONFIG_FILE:q} 2> {log:q}"
+
+
+rule enrich:
+    input:
+        str(P.reactome_gmt),
+        str(P.rna_de(PRIMARY)),
+        str(P.prot_da),
+    output:
+        str(P.gsea_rna),
+        str(P.gsea_prot),
+    threads: 8
+    log:
+        str(P.log("enrich_snakemake")),
+    benchmark:
+        str(BENCH / "enrich.tsv")
+    shell:
+        "cardioomics enrich --config {CONFIG_FILE:q} --threads {threads} 2> {log:q}"
+
+
+rule network:
+    input:
+        str(P.rna_de(PRIMARY)),
+    output:
+        str(P.string_edges),
+        str(P.hubs),
+    log:
+        str(P.log("network_snakemake")),
+    shell:
+        "cardioomics network --config {CONFIG_FILE:q} 2> {log:q}"
+
+
+rule integrate:
+    input:
+        str(P.rna_de(PRIMARY)),
+        str(P.prot_da),
+        str(P.prot_log2),
+        str(P.prot_meta),
+        str(P.gsea_rna),
+        str(P.gsea_prot),
+    output:
+        str(P.integration_summary),
+        str(P.concordance),
+    log:
+        str(P.log("integrate_snakemake")),
+    benchmark:
+        str(BENCH / "integrate.tsv")
+    shell:
+        "cardioomics integrate --config {CONFIG_FILE:q} 2> {log:q}"
+
+
+rule classify:
+    input:
+        str(P.rna_counts),
+        str(P.rna_meta),
+    output:
+        str(P.clf_metrics),
+        str(P.clf_model),
+    threads: 8
+    log:
+        str(P.log("classify_snakemake")),
+    benchmark:
+        str(BENCH / "classify.tsv")
+    shell:
+        "cardioomics classify --config {CONFIG_FILE:q} --threads {threads} 2> {log:q}"
+
+
+rule report:
+    input:
+        str(P.integration_summary),
+        str(P.clf_metrics),
+        str(P.hubs),
+        [str(P.rna_de(c)) for c in CONTRASTS],
+    output:
+        str(P.report_md),
+        str(P.run_summary),
+    log:
+        str(P.log("report_snakemake")),
+    shell:
+        "cardioomics report --config {CONFIG_FILE:q} 2> {log:q}"
