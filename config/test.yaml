@@ -1,0 +1,49 @@
+run_name: ci_fixture
+outdir: .test_work/results
+datadir: .test_work/data
+cachedir: .test_work/cache
+seed: 1
+offline: true
+
+sources:
+  rnaseq_counts_url: "file://fixture"
+  rnaseq_series_matrix_url: "file://fixture"
+  gene_info_url: "file://fixture"
+  proteomics_url: "file://fixture"
+  reactome_gmt_url: "file://fixture"
+
+rnaseq:
+  exclude_etiologies: [PPCM]
+  min_count: 5
+  design: "~ sex + age_z + etiology"
+  contrasts:
+    - [etiology, DCM, NF]
+    - [etiology, HCM, NF]
+  pca_top_genes: 200
+
+proteomics:
+  chamber: LV
+  case: ICM
+  control: Donor
+  min_valid_frac: 0.6
+
+enrichment:
+  min_size: 5
+  max_size: 100
+  permutations: 100
+
+network:
+  top_n: 30
+
+integration:
+  signature_padj: 0.05
+  signature_lfc: 0.5
+  signature_max_genes: 20
+  n_permutations: 200
+
+classifier:
+  outer_folds: 3
+  inner_folds: 3
+  n_top_var_genes: 100
+  C_grid: [0.1, 1.0]
+  l1_ratio_grid: [0.5]
