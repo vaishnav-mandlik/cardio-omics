@@ -1,0 +1,29 @@
+executor: slurm
+jobs: 20
+latency-wait: 60
+rerun-incomplete: true
+printshellcmds: true
+
+default-resources:
+  slurm_account: "<PI_GROUP>"
+  slurm_partition: standard
+  runtime: 30
+  mem_mb: 4000
+  cpus_per_task: 1
+
+set-threads:
+  rnaseq_de: 16
+  classify: 16
+  enrich: 8
+
+set-resources:
+  rnaseq_de:
+    mem_mb: 32000
+    runtime: 120
+    cpus_per_task: 16
+  classify:
+    mem_mb: 16000
+    runtime: 90
+    cpus_per_task: 16
+  enrich:
+    cpus_per_task: 8
