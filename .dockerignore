@@ -1,0 +1,13 @@
+.venv
+.git
+.snakemake
+.cache
+.test_work
+results
+data
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+*.sif
+.snakemake_run.log
